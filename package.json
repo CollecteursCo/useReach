@@ -1,0 +1,20 @@
+{
+  "name": "use-reach",
+  "version": "1.0.0",
+  "description": "React hook for Reach",
+  "main": "index.js",
+  "repository": "https://github.com/collecteursCo/useReach",
+  "author": "Berkay Sargın",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "@reach-sh/stdlib": "0.1.12-rc.2"
+  },
+  "dependencies": {
+    "@doubco/logbook": "^1.0.7"
+  },
+  "devDependencies": {
+    "react": "^18.2.0",
+    "@reach-sh/stdlib": "0.1.12-rc.2"
+  }
+}
