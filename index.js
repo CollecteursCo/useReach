@@ -61,7 +61,6 @@ var CryptoCurrency;
 (function (CryptoCurrency) {
     CryptoCurrency["ALGO"] = "ALGO";
     CryptoCurrency["ETH"] = "ETH";
-    CryptoCurrency["SOL"] = "SOL";
 })(CryptoCurrency || (CryptoCurrency = {}));
 var Wallet;
 (function (Wallet) {
@@ -124,7 +123,7 @@ const Store = {
 };
 
 const Context = React.createContext({});
-const ReachProvider = (props) => {
+function ReachProvider(props) {
     var _a;
     const { loadContract, network, config, debug, onError } = props;
     const STORAGE_KEY = ((_a = config === null || config === void 0 ? void 0 : config.storage) === null || _a === void 0 ? void 0 : _a.key) ? config.storage.key : "reach";
@@ -136,6 +135,8 @@ const ReachProvider = (props) => {
     }, [])();
     const [status, setStatus] = React.useState("loading");
     const [, setSigningLogs] = React.useState([]);
+    React.useState(0);
+    const [fetching, setFetching] = React.useState(true);
     React.useEffect(() => {
         function loadLibs() {
             return __awaiter(this, void 0, void 0, function* () {
@@ -157,9 +158,19 @@ const ReachProvider = (props) => {
             connectSavedWallet();
         }
     }, [status]);
+    const getBalance = (addr, decimals = 2) => __awaiter(this, void 0, void 0, function* () {
+        if (reach.current) {
+            if ((account === null || account === void 0 ? void 0 : account.currency) === CryptoCurrency.ALGO) {
+                const ra = yield reach.current.connectAccount({ addr });
+                const balance = yield ra.balanceOf();
+                return parseFloat(reach.current.formatCurrency(balance, decimals));
+            }
+        }
+        return 0;
+    });
     const setSigningMonitor = (reach) => {
         if (reach) {
-            reach.setSigningMonitor((evt, pre, post) => __awaiter(void 0, void 0, void 0, function* () {
+            reach.setSigningMonitor((evt, pre, post) => __awaiter(this, void 0, void 0, function* () {
                 const log = [evt, yield pre, yield post];
                 setSigningLogs((prev) => {
                     return [...prev, log];
@@ -220,6 +231,7 @@ const ReachProvider = (props) => {
                             address: address,
                             provider: provider,
                             currency: currency,
+                            balance: yield getBalance(address),
                         });
                     }
                 }
@@ -227,6 +239,7 @@ const ReachProvider = (props) => {
                     console.error("Error when connecting to saved wallet", e);
                 }
             }
+            setFetching(false);
             return reachAccount;
         });
     }
@@ -251,7 +264,7 @@ const ReachProvider = (props) => {
                 };
                 Store.set({ account }, STORAGE_KEY);
                 yield new Promise((r) => setTimeout(r, 500));
-                setAccount(account);
+                setAccount(Object.assign(Object.assign({}, account), { balance: yield getBalance(account.address) }));
                 return account;
             }
             catch (e) {
@@ -284,16 +297,18 @@ const ReachProvider = (props) => {
     };
     return (React__default["default"].createElement(Context.Provider, { value: {
             status,
+            fetching,
             network,
             lib: lib.current,
             reach: reach.current,
             contract: contract.current,
+            getSigningLogs,
             connectWallet,
             disconnectWallet,
+            getBalance,
             account,
-            getSigningLogs,
         } }, props.children));
-};
+}
 const useReach = () => {
     const context = React.useContext(Context);
     return context;
