@@ -100,18 +100,14 @@ export type ReachProviderProps = {
 
 export type ReachContext = {
   network?: BlockchainNetwork;
-
   status: "loading" | "ready" | "error";
   fetching: boolean;
-
   lib: Lib | null;
   reach: ReachLib | null;
   contract?: any;
-
   getSigningLogs: () => any[];
   connectWallet: (provider: Wallet) => Promise<any>;
   disconnectWallet: (callback?: () => void) => void;
   getBalance: (addr: string) => Promise<number>;
-
   account: Account;
 };
