@@ -9,24 +9,28 @@ import React, {
 import { LogBook } from "@doubco/logbook";
 
 import {
+  Account,
   BlockchainNetwork,
   CryptoCurrency,
-  TReachContext,
-  TReachProviderProps,
+  SimpleContract,
+  ReachContext,
+  ReachProviderProps,
   Wallet,
 } from "./types";
 import { Store } from "./utils/Store";
 
-const Context = createContext<TReachContext>({} as any);
+const Context = createContext<ReachContext>({} as any);
 
-export const ReachProvider = (props: TReachProviderProps) => {
+export function ReachProvider<Contract extends Partial<SimpleContract>>(
+  props: ReachProviderProps,
+) {
   const { loadContract, network, config, debug, onError } = props;
 
   const STORAGE_KEY = config?.storage?.key ? config.storage.key : "reach";
 
-  const reach = useRef<TReachContext["reach"]>(null);
-  const lib = useRef<TReachContext["lib"]>(null);
-  const contract = useRef<any>(null);
+  const reach = useRef<ReachContext["reach"]>(null);
+  const lib = useRef<ReachContext["lib"]>(null);
+  const contract = useRef<SimpleContract>(null);
 
   const logger = useCallback(() => {
     return new LogBook({
@@ -34,9 +38,9 @@ export const ReachProvider = (props: TReachProviderProps) => {
     });
   }, [])();
 
-  const [status, setStatus] = useState<TReachContext["status"]>("loading");
+  const [status, setStatus] = useState<ReachContext["status"]>("loading");
   const [, setSigningLogs] = useState<any[]>([]);
-  const [balance, setBalance] = useState<TReachContext["balance"]>(0);
+  const [balance, setBalance] = useState<number>(0);
   const [fetching, setFetching] = useState<boolean>(true);
 
   useEffect(() => {
@@ -74,7 +78,7 @@ export const ReachProvider = (props: TReachProviderProps) => {
     return 0;
   };
 
-  const setSigningMonitor = (reach: TReachContext["reach"]) => {
+  const setSigningMonitor = (reach: ReachContext["reach"]) => {
     if (reach) {
       reach.setSigningMonitor(async (evt: any, pre: any, post: any) => {
         const log = [evt, await pre, await post];
@@ -120,7 +124,7 @@ export const ReachProvider = (props: TReachProviderProps) => {
     }
   };
 
-  const [account, setAccount] = useState<any>();
+  const [account, setAccount] = useState<Account>();
 
   async function connectSavedWallet() {
     if (!lib.current) return;
@@ -145,6 +149,7 @@ export const ReachProvider = (props: TReachProviderProps) => {
             address: address,
             provider: provider,
             currency: currency,
+            balance: await getBalance(address),
           });
         }
       } catch (e) {
@@ -178,7 +183,10 @@ export const ReachProvider = (props: TReachProviderProps) => {
 
       Store.set({ account }, STORAGE_KEY);
       await new Promise((r) => setTimeout(r, 500));
-      setAccount(account);
+      setAccount({
+        ...account,
+        balance: await getBalance(account.address),
+      });
 
       return account;
     } catch (e: any) {
@@ -212,6 +220,8 @@ export const ReachProvider = (props: TReachProviderProps) => {
     <Context.Provider
       value={{
         status,
+        fetching,
+
         network,
 
         lib: lib.current,
@@ -219,21 +229,17 @@ export const ReachProvider = (props: TReachProviderProps) => {
         contract: contract.current,
 
         getSigningLogs,
-
         connectWallet,
         disconnectWallet,
-        account,
-
-        balance,
         getBalance,
 
-        fetching,
+        account,
       }}
     >
       {props.children}
     </Context.Provider>
   );
-};
+}
 
 export const useReach = () => {
   const context = useContext(Context);

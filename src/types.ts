@@ -17,6 +17,7 @@ export type ReachLib = Stdlib_User<
 >;
 
 export type Connector = "ETH" | "ALGO" | "CFX";
+
 export type ConnectorMode =
   | "ETH-devnet"
   | "ETH-live"
@@ -66,7 +67,18 @@ export enum Wallet {
   WALLETCONNECT = "WALLETCONNECT",
 }
 
-export type TReachProviderProps = {
+export interface SimpleContract {
+  address: string;
+}
+
+export type Account = {
+  address: string;
+  provider: Wallet;
+  currency: CryptoCurrency;
+  balance: number;
+};
+
+export type ReachProviderProps = {
   network?: BlockchainNetwork;
   debug?: boolean;
   onError?: (error: Error) => void;
@@ -86,29 +98,20 @@ export type TReachProviderProps = {
   children: React.ReactNode;
 };
 
-export type TReachContext = {
-  status: "loading" | "ready";
+export type ReachContext = {
   network?: BlockchainNetwork;
+
+  status: "loading" | "ready" | "error";
+  fetching: boolean;
 
   lib: Lib | null;
   reach: ReachLib | null;
   contract?: any;
 
   getSigningLogs: () => any[];
-
   connectWallet: (provider: Wallet) => Promise<any>;
   disconnectWallet: (callback?: () => void) => void;
-
-  account: { address: string; provider: Wallet; currency: CryptoCurrency };
-
-  fetching: boolean;
-
-  balance: number;
   getBalance: (addr: string) => Promise<number>;
-};
 
-export type TBlockchainAccount = {
-  address: string;
-  provider: Wallet;
-  currency: CryptoCurrency;
+  account: Account;
 };

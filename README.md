@@ -97,4 +97,5 @@ The useReach hook provides the Reach API to the React application.
 - `account` (object): The account object.
 - `balance` (number): The account balance.
 - `getBalance` (function): Get any account address' balance.
-- `fetching` (boolean): Is the balance fetching?
+
+- `fetching` (boolean): Is any api is fetching?
