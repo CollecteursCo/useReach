@@ -11,7 +11,7 @@ export const LocalStorage = {
 
     return null;
   },
-  remove: function (key: string) {
+  remove: function (key: string): void {
     try {
       localStorage.removeItem(key);
     } catch (e) {}
