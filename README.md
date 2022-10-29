@@ -83,7 +83,7 @@ The useReach hook provides the Reach API to the React application.
 
 #### Returns
 
-- `status` (string): The status of the Reach API. Can be `loading`, `ready`.
+- `status` (string): The status of the Reach API. Can be `loading`, `ready`, `error`.
 - `network` (string): The network name. Can be `TESTNET`, `MAINNET`.
 
 - `lib` (object): The Reach.sh stdlib.
@@ -93,9 +93,8 @@ The useReach hook provides the Reach API to the React application.
 - `getSigningLogs` (function): Get the signing logs.
 - `connectWallet` (function): Connect the wallet.
 - `disconnectWallet` (function): Disconnect the wallet.
+- `getBalance` (function): Get any account address' balance.
 
 - `account` (object): The account object.
-- `balance` (number): The account balance.
-- `getBalance` (function): Get any account address' balance.
 
 - `fetching` (boolean): Is any api is fetching?

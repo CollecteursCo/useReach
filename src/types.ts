@@ -1,6 +1,7 @@
 import React from "react";
 import { TLogBookConfig } from "@doubco/logbook";
 import { Stdlib_User } from "@reach-sh/stdlib/dist/types/interfaces";
+import { IAccount } from "@reach-sh/stdlib/dist/types/shared_impl";
 
 export type ReachLib = Stdlib_User<
   any,
@@ -13,7 +14,7 @@ export type ReachLib = Stdlib_User<
   any,
   any,
   any,
-  any
+  IAccount<{ addr: string }, any, any, any, any>
 >;
 
 export type Connector = "ETH" | "ALGO" | "CFX";

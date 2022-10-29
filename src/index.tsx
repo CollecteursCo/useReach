@@ -30,7 +30,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
   const reach = useRef<ReachContext["reach"]>(null);
   const lib = useRef<ReachContext["lib"]>(null);
-  const contract = useRef<SimpleContract>(null);
+  const contract = useRef<Contract>(null);
 
   const logger = useCallback(() => {
     return new LogBook({
@@ -40,8 +40,8 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
   const [status, setStatus] = useState<ReachContext["status"]>("loading");
   const [, setSigningLogs] = useState<any[]>([]);
-  const [balance, setBalance] = useState<number>(0);
   const [fetching, setFetching] = useState<boolean>(true);
+  const [account, setAccount] = useState<Account>();
 
   useEffect(() => {
     async function loadLibs() {
@@ -82,7 +82,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
     if (reach) {
       reach.setSigningMonitor(async (evt: any, pre: any, post: any) => {
         const log = [evt, await pre, await post];
-        setSigningLogs((prev: any) => {
+        setSigningLogs((prev) => {
           return [...prev, log];
         });
       });
@@ -124,13 +124,11 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
     }
   };
 
-  const [account, setAccount] = useState<Account>();
-
   async function connectSavedWallet() {
     if (!lib.current) return;
     if (!reach.current) return;
 
-    let reachAccount;
+    let ra;
 
     const account = Store.get("account", STORAGE_KEY);
     const { currency, address, provider } = account || {};
@@ -143,7 +141,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
           } else if (provider === Wallet.WALLETCONNECT) {
             loadAlgoWalletProvider(lib.current.ALGO_WalletConnect);
           }
-          reachAccount = await reach.current.connectAccount({ addr: address });
+          ra = await reach.current.connectAccount({ addr: address });
 
           setAccount({
             address: address,
@@ -159,7 +157,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
     setFetching(false);
 
-    return reachAccount;
+    return ra;
   }
 
   async function connectWallet(wallet: Wallet) {
