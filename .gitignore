@@ -61,4 +61,7 @@ typings/
 .next
 
 lib/
+types/
 
+index.js
+index.js.map

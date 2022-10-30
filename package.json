@@ -1,6 +1,6 @@
 {
   "name": "@collecteurs/use-reach",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React hook for Reach.sh",
   "main": "index.js",
   "repository": {

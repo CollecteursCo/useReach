@@ -30,7 +30,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
   const reach = useRef<ReachContext["reach"]>(null);
   const lib = useRef<ReachContext["lib"]>(null);
-  const contract = useRef<Contract>(null);
+  const contract = useRef<Contract | null>(null);
 
   const logger = useCallback(() => {
     return new LogBook({
@@ -41,7 +41,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
   const [status, setStatus] = useState<ReachContext["status"]>("loading");
   const [, setSigningLogs] = useState<any[]>([]);
   const [fetching, setFetching] = useState<boolean>(true);
-  const [account, setAccount] = useState<Account>();
+  const [account, setAccount] = useState<ReachContext["account"]>();
 
   useEffect(() => {
     async function loadLibs() {
@@ -219,18 +219,14 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
       value={{
         status,
         fetching,
-
         network,
-
         lib: lib.current,
         reach: reach.current,
         contract: contract.current,
-
         getSigningLogs,
         connectWallet,
         disconnectWallet,
         getBalance,
-
         account,
       }}
     >

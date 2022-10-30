@@ -110,5 +110,5 @@ export type ReachContext = {
   connectWallet: (provider: Wallet) => Promise<any>;
   disconnectWallet: (callback?: () => void) => void;
   getBalance: (addr: string) => Promise<number>;
-  account: Account;
+  account: Account | undefined;
 };

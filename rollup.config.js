@@ -14,6 +14,7 @@ export default [
         exports: "named",
       },
     ],
+    external: ["react", "@reachsh/stdlib", "@doubco/logbook"],
     plugins: [
       external(),
       typescript({
