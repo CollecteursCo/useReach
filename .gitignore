@@ -62,6 +62,7 @@ typings/
 
 lib/
 types/
+dist/
 
 index.js
 index.js.map

@@ -9,8 +9,6 @@ import React, {
 import { LogBook } from "@doubco/logbook";
 
 import {
-  Account,
-  BlockchainNetwork,
   CryptoCurrency,
   SimpleContract,
   ReachContext,
@@ -19,13 +17,12 @@ import {
 } from "./types";
 import { Store } from "./utils/Store";
 
-const Context = createContext<ReachContext>({} as any);
+const Context = createContext<ReachContext>({ signingLogs: [] } as any);
 
 export function ReachProvider<Contract extends Partial<SimpleContract>>(
   props: ReachProviderProps,
 ) {
   const { loadContract, network, config, debug, onError } = props;
-
   const STORAGE_KEY = config?.storage?.key ? config.storage.key : "reach";
 
   const reach = useRef<ReachContext["reach"]>(null);
@@ -39,21 +36,31 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
   }, [])();
 
   const [status, setStatus] = useState<ReachContext["status"]>("loading");
-  const [, setSigningLogs] = useState<any[]>([]);
+  const [signingLogs, setSigningLogs] = useState<any[]>([]);
   const [fetching, setFetching] = useState<boolean>(true);
   const [account, setAccount] = useState<ReachContext["account"]>();
 
   useEffect(() => {
     async function loadLibs() {
-      import("@reach-sh/stdlib").then(async (x: any) => {
-        lib.current = x.default;
+      logger.info("USEREACH", "Loading stdlib.");
+      import("@reach-sh/stdlib")
+        .then(async (x: any) => {
+          lib.current = x.default;
+          logger.success("USEREACH", "stdlib loaded.");
 
-        if (loadContract) {
-          contract.current = await loadContract();
-        }
+          if (loadContract) {
+            contract.current = await loadContract();
+          }
 
-        setStatus("ready");
-      });
+          setStatus("ready");
+          setFetching(false);
+        })
+        .catch((e) => {
+          logger.error("USEREACH", "loadLibs: stdlib not initialized.");
+          onError && onError(new Error("stdlib not initialized."));
+          setStatus("error");
+          setFetching(false);
+        });
     }
 
     if (status === "loading") {
@@ -66,39 +73,60 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
   }, [status]);
 
   const getBalance = async (addr: string, decimals = 2) => {
+    logger.info("USEREACH", "getBalance: Started.");
     if (reach.current) {
-      if (account?.currency === CryptoCurrency.ALGO) {
+      if (account?.currency === "ALGO") {
         const ra = await reach.current.connectAccount({ addr });
         const balance = await ra.balanceOf();
+        const formatted = parseFloat(
+          reach.current.formatCurrency(balance, decimals),
+        );
 
-        return parseFloat(reach.current.formatCurrency(balance, decimals));
+        logger.info("USEREACH", "getBalance: Ready.", balance, formatted);
+
+        return formatted;
       }
+    } else {
+      onError && onError(new Error("Reach not initialized."));
+      logger.error("USEREACH", "getBalance: Wallet not set.");
     }
 
     return 0;
   };
 
   const setSigningMonitor = (reach: ReachContext["reach"]) => {
+    logger.info("USEREACH", "setSigningMonitor: Started.");
     if (reach) {
       reach.setSigningMonitor(async (evt: any, pre: any, post: any) => {
         const log = [evt, await pre, await post];
+        logger.info("USEREACH", "setSigningMonitor: New signing log.", log);
         setSigningLogs((prev) => {
           return [...prev, log];
         });
       });
+    } else {
+      onError && onError(new Error("Reach not initialized."));
+      logger.error("USEREACH", "setSigningMonitor: Wallet not set.");
     }
   };
 
-  const loadAlgoWalletProvider = (WalletProvider: any) => {
+  const loadAlgoWalletProvider = (WalletProviderOptions: any) => {
+    logger.info(
+      "USEREACH",
+      "loadAlgoWalletProvider: Activating wallet.",
+      WalletProviderOptions,
+      network,
+    );
+
     if (lib.current) {
       reach.current = lib.current.loadStdlib(
         debug
           ? {
               REACH_CONNECTOR_MODE: "ALGO",
+              REACH_DEBUG: "Y",
             }
           : {
               REACH_CONNECTOR_MODE: "ALGO",
-              REACH_DEBUG: "Y",
             },
       );
 
@@ -106,7 +134,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
         reach.current.setWalletFallback(
           reach.current.walletFallback({
             providerEnv:
-              network === BlockchainNetwork.TESTNET && !config?.algo
+              network === "TESTNET" && !config?.algo
                 ? "TestNet"
                 : {
                     ALGO_TOKEN: config?.algo?.token || "",
@@ -116,31 +144,57 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
                     ALGO_INDEXER_PORT: config?.algo?.indexer?.port || "",
                     ALGO_INDEXER_SERVER: config?.algo?.indexer?.server || "",
                   },
-            WalletProvider,
+            ...WalletProviderOptions,
           }),
         );
+
+        logger.success(
+          "USEREACH",
+          "loadAlgoWalletProvider: Wallet ready.",
+          WalletProviderOptions,
+          network,
+        );
+
         setSigningMonitor(reach.current);
       }
+    } else {
+      logger.error(
+        "USEREACH",
+        "loadAlgoWalletProvider: stdlib not initialized.",
+      );
+      onError && onError(new Error("Stdlib not initialized."));
     }
   };
 
   async function connectSavedWallet() {
-    if (!lib.current) return;
-    if (!reach.current) return;
+    logger.info("USEREACH", "connectSavedWallet: Activating saved wallet.");
 
-    let ra;
+    if (!lib.current) {
+      onError && onError(new Error("Stdlib not initialized."));
+      logger.error("USEREACH", "connectSavedWallet: stdlib not initialized.");
+      return;
+    }
+
+    let ra: Awaited<ReturnType<ReachContext["reach"]["connectAccount"]>>;
 
     const account = Store.get("account", STORAGE_KEY);
     const { currency, address, provider } = account || {};
 
-    if (currency === CryptoCurrency.ALGO) {
+    if (currency === "ALGO") {
       try {
         if (address && provider !== undefined) {
-          if (provider === Wallet.MYALGO) {
-            loadAlgoWalletProvider(lib.current.ALGO_MyAlgoConnect);
-          } else if (provider === Wallet.WALLETCONNECT) {
-            loadAlgoWalletProvider(lib.current.ALGO_WalletConnect);
+          if (provider === "MYALGO") {
+            loadAlgoWalletProvider({
+              MyAlgoConnect: lib.current.ALGO_MyAlgoConnect,
+            });
+          } else if (provider === "WALLETCONNECT") {
+            loadAlgoWalletProvider({
+              WalletConnect: lib.current.ALGO_WalletConnect,
+            });
           }
+
+          logger.success("USEREACH", "connectSavedWallet: Wallet ready.");
+
           ra = await reach.current.connectAccount({ addr: address });
 
           setAccount({
@@ -149,9 +203,13 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
             currency: currency,
             balance: await getBalance(address),
           });
+
+          logger.success("USEREACH", "connectSavedWallet: Wallet connected.");
         }
       } catch (e) {
-        console.error("Error when connecting to saved wallet", e);
+        logger.error("USEREACH", "connectSavedWallet: Error", e);
+        onError && onError(e);
+        return null;
       }
     }
 
@@ -160,35 +218,55 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
     return ra;
   }
 
-  async function connectWallet(wallet: Wallet) {
-    if (!lib.current) return;
-    if (!reach.current) return;
+  async function connectWallet(currency: CryptoCurrency, wallet: Wallet) {
+    logger.info("USEREACH", "connectWallet: Activating wallet.", wallet);
+    if (!lib.current) {
+      onError && onError(new Error("Stdlib not initialized."));
+      logger.error("USEREACH", "connectWallet: stdlib not initialized.");
+      return;
+    }
 
     try {
-      if (wallet === Wallet.MYALGO) {
-        loadAlgoWalletProvider(lib.current.ALGO_MyAlgoConnect);
-      } else if (wallet === Wallet.WALLETCONNECT) {
-        loadAlgoWalletProvider(lib.current.ALGO_WalletConnect);
+      if (currency === "ALGO") {
+        if (wallet === "MYALGO") {
+          loadAlgoWalletProvider({
+            MyAlgoConnect: lib.current.ALGO_MyAlgoConnect,
+          });
+        } else if (wallet === "WALLETCONNECT") {
+          loadAlgoWalletProvider({
+            WalletConnect: lib.current.ALGO_WalletConnect,
+          });
+        }
       }
+
+      logger.success("USEREACH", "connectWallet: Wallet ready.");
+
+      if (!reach.current) return;
 
       const reachAccount = await reach.current.getDefaultAccount();
 
-      const account = {
+      const account: ReachContext["account"] = {
         address: reachAccount.networkAccount.addr,
         provider: wallet,
-        currency: CryptoCurrency.ALGO,
+        currency: "ALGO",
+        balance: 0,
       };
 
       Store.set({ account }, STORAGE_KEY);
+
+      // cheap hack for render cycle, will fix later
       await new Promise((r) => setTimeout(r, 500));
+
       setAccount({
         ...account,
         balance: await getBalance(account.address),
       });
 
+      logger.success("USEREACH", "connectWallet: Wallet connected.");
+
       return account;
     } catch (e: any) {
-      logger.error("WALLET", "Error when connecting to wallet", e);
+      logger.error("USEREACH", "connectWallet: Error", e);
       onError && onError(e);
       return null;
     }
@@ -198,21 +276,13 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
     try {
       setAccount(undefined);
       Store.clean(STORAGE_KEY);
+      logger.success("USEREACH", "disconnectWallet: Wallet disconnected.");
     } catch (e: any) {
-      logger.error("WALLET", "Error when disconnecting from wallet", e);
+      logger.error("USEREACH", "disconnectWallet: Error", e);
       onError && onError(e);
       return;
     }
   }
-
-  const getSigningLogs = () => {
-    let items;
-    setSigningLogs((prev: any) => {
-      items = prev;
-      return prev;
-    });
-    return items as unknown as any[];
-  };
 
   return (
     <Context.Provider
@@ -223,7 +293,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
         lib: lib.current,
         reach: reach.current,
         contract: contract.current,
-        getSigningLogs,
+        signingLogs,
         connectWallet,
         disconnectWallet,
         getBalance,

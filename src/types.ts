@@ -53,20 +53,11 @@ export type Lib = {
   ALGO_WalletConnect: any;
 };
 
-export enum BlockchainNetwork {
-  MAINNET = "MAINNET",
-  TESTNET = "TESTNET",
-}
+export type BlockchainNetwork = "MAINNET" | "TESTNET";
 
-export enum CryptoCurrency {
-  ALGO = "ALGO",
-  ETH = "ETH",
-}
+export type CryptoCurrency = "ETH" | "ALGO" | "CFX";
 
-export enum Wallet {
-  MYALGO = "MYALGO",
-  WALLETCONNECT = "WALLETCONNECT",
-}
+export type Wallet = "MYALGO" | "WALLETCONNECT";
 
 export interface SimpleContract {
   address: string;
@@ -104,10 +95,10 @@ export type ReachContext = {
   status: "loading" | "ready" | "error";
   fetching: boolean;
   lib: Lib | null;
-  reach: ReachLib | null;
+  reach?: ReachLib | null;
   contract?: any;
-  getSigningLogs: () => any[];
-  connectWallet: (provider: Wallet) => Promise<any>;
+  signingLogs?: any[];
+  connectWallet: (currency: CryptoCurrency, provider: Wallet) => Promise<any>;
   disconnectWallet: (callback?: () => void) => void;
   getBalance: (addr: string) => Promise<number>;
   account: Account | undefined;
