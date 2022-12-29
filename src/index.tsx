@@ -37,7 +37,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
   const [status, setStatus] = useState<ReachContext["status"]>("loading");
   const [signingLogs, setSigningLogs] = useState<any[]>([]);
-  const [fetching, setFetching] = useState<boolean>(true);
+  const [connecting, setConnecting] = useState<boolean>(true);
   const [account, setAccount] = useState<ReachContext["account"]>();
 
   useEffect(() => {
@@ -53,13 +53,11 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
           }
 
           setStatus("ready");
-          setFetching(false);
         })
         .catch((e) => {
           logger.error("USEREACH", "loadLibs: stdlib not initialized.");
           onError && onError(new Error("stdlib not initialized."));
           setStatus("error");
-          setFetching(false);
         });
     }
 
@@ -213,13 +211,16 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
       }
     }
 
-    setFetching(false);
+    setConnecting(false);
 
     return ra;
   }
 
   async function connectWallet(currency: CryptoCurrency, wallet: Wallet) {
+    setConnecting(true);
+
     logger.info("USEREACH", "connectWallet: Activating wallet.", wallet);
+
     if (!lib.current) {
       onError && onError(new Error("Stdlib not initialized."));
       logger.error("USEREACH", "connectWallet: stdlib not initialized.");
@@ -241,7 +242,10 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
       logger.success("USEREACH", "connectWallet: Wallet ready.");
 
-      if (!reach.current) return;
+      if (!reach.current) {
+        setConnecting(false);
+        return;
+      }
 
       const reachAccount = await reach.current.getDefaultAccount();
 
@@ -264,10 +268,12 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
       logger.success("USEREACH", "connectWallet: Wallet connected.");
 
+      setConnecting(false);
       return account;
     } catch (e: any) {
       logger.error("USEREACH", "connectWallet: Error", e);
       onError && onError(e);
+      setConnecting(false);
       return null;
     }
   }
@@ -288,7 +294,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
     <Context.Provider
       value={{
         status,
-        fetching,
+        connecting,
         network,
         lib: lib.current,
         reach: reach.current,
