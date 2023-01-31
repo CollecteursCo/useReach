@@ -98,6 +98,11 @@ export type ReachContext = {
   reach?: ReachLib | null;
   contract?: any;
   signingLogs?: any[];
+  connectToKnownWallet: (wallet: {
+    address: string;
+    provider: Wallet;
+    currency: CryptoCurrency;
+  }) => Promise<any>;
   connectWallet: (currency: CryptoCurrency, provider: Wallet) => Promise<any>;
   disconnectWallet: (callback?: () => void) => void;
   getBalance: (addr: string) => Promise<number>;

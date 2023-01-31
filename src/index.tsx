@@ -278,6 +278,63 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
     }
   }
 
+  async function connectToKnownWallet({
+    currency,
+    address,
+    provider,
+  }: {
+    address: string;
+    provider: Wallet;
+    currency: CryptoCurrency;
+  }) {
+    logger.info("USEREACH", "connectToKnownWallet: Activating wallet.");
+
+    if (!lib.current) {
+      onError && onError(new Error("Stdlib not initialized."));
+      logger.error("USEREACH", "connectToKnownWallet: stdlib not initialized.");
+      return;
+    }
+
+    let ra: Awaited<ReturnType<ReachContext["reach"]["connectAccount"]>>;
+
+    if (currency === "ALGO") {
+      try {
+        if (address && provider !== undefined) {
+          if (provider === "MYALGO") {
+            loadAlgoWalletProvider({
+              MyAlgoConnect: lib.current.ALGO_MyAlgoConnect,
+            });
+          } else if (provider === "WALLETCONNECT") {
+            loadAlgoWalletProvider({
+              WalletConnect: lib.current.ALGO_WalletConnect,
+            });
+          }
+
+          logger.success("USEREACH", "connectToKnownWallet: Wallet ready.");
+
+          ra = await reach.current.connectAccount({ addr: address });
+
+          setAccount({
+            address: address,
+            provider: provider,
+            currency: currency,
+            balance: await getBalance(address),
+          });
+
+          logger.success("USEREACH", "connectToKnownWallet: Wallet connected.");
+        }
+      } catch (e) {
+        logger.error("USEREACH", "connectToKnownWallet: Error", e);
+        onError && onError(e);
+        return null;
+      }
+    }
+
+    setConnecting(false);
+
+    return ra;
+  }
+
   async function disconnectWallet() {
     try {
       setAccount(undefined);
@@ -301,6 +358,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
         contract: contract.current,
         signingLogs,
         connectWallet,
+        connectToKnownWallet,
         disconnectWallet,
         getBalance,
         account,
