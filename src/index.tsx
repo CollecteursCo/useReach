@@ -278,11 +278,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
     }
   }
 
-  async function connectToKnownWallet({
-    currency,
-    address,
-    provider,
-  }: {
+  async function connectToKnownWallet(account: {
     address: string;
     provider: Wallet;
     currency: CryptoCurrency;
@@ -297,14 +293,14 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
     let ra: Awaited<ReturnType<ReachContext["reach"]["connectAccount"]>>;
 
-    if (currency === "ALGO") {
+    if (account.currency === "ALGO") {
       try {
-        if (address && provider !== undefined) {
-          if (provider === "MYALGO") {
+        if (account.address && account.provider !== undefined) {
+          if (account.provider === "MYALGO") {
             loadAlgoWalletProvider({
               MyAlgoConnect: lib.current.ALGO_MyAlgoConnect,
             });
-          } else if (provider === "WALLETCONNECT") {
+          } else if (account.provider === "WALLETCONNECT") {
             loadAlgoWalletProvider({
               WalletConnect: lib.current.ALGO_WalletConnect,
             });
@@ -312,13 +308,16 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
           logger.success("USEREACH", "connectToKnownWallet: Wallet ready.");
 
-          ra = await reach.current.connectAccount({ addr: address });
+          ra = await reach.current.connectAccount({ addr: account.address });
+
+          Store.set({ account }, STORAGE_KEY);
+
+          // cheap hack for render cycle, will fix later
+          await new Promise((r) => setTimeout(r, 500));
 
           setAccount({
-            address: address,
-            provider: provider,
-            currency: currency,
-            balance: await getBalance(address),
+            ...account,
+            balance: await getBalance(account.address),
           });
 
           logger.success("USEREACH", "connectToKnownWallet: Wallet connected.");
@@ -332,7 +331,7 @@ export function ReachProvider<Contract extends Partial<SimpleContract>>(
 
     setConnecting(false);
 
-    return ra;
+    return account;
   }
 
   async function disconnectWallet() {
